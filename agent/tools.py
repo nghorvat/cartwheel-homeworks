@@ -24,7 +24,7 @@ from agent import db
 from agent.auth import AuthContext, can_cancel_order, permission_denied
 from agent.helpcenter import load_policy_docs
 from agent.killswitch import kill_switch
-from agent.db import get_store_by_name, list_products, list_orders_for_user, list_orders_for_store
+from agent.db import get_store_by_name, list_products, list_orders_for_user, list_orders_for_store, get_order, set_order_status
 
 MAX_SEARCH_LIMIT = 25
 DEFAULT_ORDER_LIMIT = 20
@@ -208,7 +208,21 @@ def cancel_order(ctx: AuthContext, order_id: int, reason: str) -> dict[str, Any]
     if paused is not None:
         return {"ok": False, "error": "paused", "reason": paused}
     ### YOUR CODE HERE (HW1)
-    raise NotImplementedError("HW1: implement cancel_order")
+    conn = db.connect()
+    o = get_order(conn, order_id)
+    if not o:
+        conn.close()
+        return {"ok": False, "error": "not_found", "reason": f"no order with id {order_id}"}
+    elif not can_cancel_order(ctx, o.user_id, o.store_id):
+        conn.close()
+        return permission_denied(f"Role: {ctx.role}, Order ID: {order_id}")
+    elif o.status != "placed":
+        conn.close()
+        return {"ok": False, "error": "not_eligible", "reason": f"Current Status: {o.status}, orders can be cancelled only before shipment"}
+    else:
+        set_order_status(conn, o.id, "cancelled")
+        conn.close()
+        return {"ok": True, "order_id": order_id, "status": "cancelled"}
 
 
 def find_order(ctx: AuthContext, query: str) -> dict[str, Any]:
