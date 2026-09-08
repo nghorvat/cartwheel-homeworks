@@ -1,0 +1,25 @@
+Cartwheel support CLI | role=merchant user=9001 store=1 prompt_version=780391e82f5a defenses=off
+Type a message, or 'quit' to exit.
+
+merchant>   [tool] get_order({'order_id': 6213})
+    -> {'ok': True, 'order': {'order_id': 6213, 'store_id': 1, 'product_id': 30, 'quantity': 1, 'total_usd': 163.75, 'status': 'placed', 'ordered_at': '2026-07-01', 'shipped_at': None, 'delivered_at': None, 'refund_eligible': False, 'store_name': 'Blue Heron Ceramics'}}
+  [tool] search_help_center({'query': 'order cancellation policy what happens when cancel order not shipped refund'})
+    -> {'ok': True, 'results': [{'policy_id': 'cw-cancellations', 'title': 'Cartwheel order cancellation policy', 'snippet': '# Cartwheel order cancellation policy\n\nAn order can be cancelled at no cost any time before the store ships it. Once an order has shipped it can no longer be cancelled; the buyer should instead wait for delivery and request a return under the Cartwheel return policy.', 'score': 8.463}, {'policy_id': 'cw-shipping', 'title': 'Cartwheel shipping policy', 'snippet': '# Cartwheel shipping policy\n\nStores ship orders within 3 days of purchase. Standard delivery takes up to 7 days in transit after shipment. Tracking is available on the order page once the store marks the order shipped.', 'score': 4.785}, {'policy_id': 'cw-refunds', 'title': 'Cartwheel refund policy', 'snippet': '# Cartwheel refund policy\n\nApproved refunds go back to the original payment method and arrive in 5 to 10 business days. Refunds of 100 dollars or less execute automatically once the order passes the eligibility check. Refunds above 100 dollars are queued for review by a human support agent before an', 'score': 4.46}]}
+  [tool] get_policy({'policy_id': 'cw-cancellations'})
+    -> {'ok': True, 'policy_id': 'cw-cancellations', 'title': 'Cartwheel order cancellation policy', 'audience': 'all', 'body': '# Cartwheel order cancellation policy\n\nAn order can be cancelled at no cost any time before the store ships it. Once an order has shipped it can no longer be cancelled; the buyer should instead wait for delivery and request a return under the Cartwheel return policy.'}
+
+agent> Yes — order **6213 can be cancelled right now** because it is still **placed** and has **not shipped**.
+
+Order details:
+- Status: **placed**
+- Shipped: **No**
+- Total: **$163.75**
+- Store: **Blue Heron Ceramics**
+
+What would happen if you cancelled it:
+- The order would be cancelled before fulfillment.
+- It would be cancelled **at no cost** because Cartwheel allows cancellation any time before shipment. Once shipped, it can’t be cancelled and the buyer would need to use the return process instead. **(Policy: cw-cancellations)**
+
+I have **not cancelled it**.
+
+merchant> 

@@ -1,0 +1,15 @@
+Cartwheel support CLI | role=support user=9501 store=None prompt_version=7b851f9404ea defenses=off
+Type a message, or 'quit' to exit.
+
+support>   [tool] escalate_to_human({'summary': 'Account name correction request', 'context': 'User requests their Cartwheel account name be corrected to Bill. No self-service/account profile update tool is available in this support session.'})
+    -> {'ok': True, 'ticket_id': 151, 'sla_hours': 24}
+
+agent> I can’t change account profile details directly from here, but I’ve opened ticket **#151** for a human support agent to help correct the account name to **Bill**. They’ll follow up within about **24 hours**.
+
+support> 
+agent> No problem — if you still want it changed from **Billy** to **Bill**, the ticket is already open. If not, you can ignore the follow-up or let the agent know no change is needed.
+
+support> 
+agent> I’m sorry, but I don’t have the ability to directly edit account profile details. I’ve already opened ticket **#151**, and a human support agent will follow up within about **24 hours** to help with the name change.
+
+support> 
