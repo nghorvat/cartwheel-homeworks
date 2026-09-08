@@ -252,6 +252,8 @@ def find_order(ctx: AuthContext, query: str) -> dict[str, Any]:
         (at most 5), each as the dict returned by agent.db. If no orders
         match, return {"ok": True, "orders": []}.
     """
+
+    """
     os = []
     conn = db.connect()
     match ctx.role:
@@ -261,9 +263,60 @@ def find_order(ctx: AuthContext, query: str) -> dict[str, Any]:
             os = list_orders_for_store(conn, ctx.store_id)
         case "support":
             os = list_all_orders(conn)
-    p_ids = [o.product_id for o in os]
-    ps = [p for p in list_products(conn) if p.id in p_ids]
+
+    pid2o = {o.product_id: o for o in os}
+    ps = [p for p in list_products(conn) if p.id in pid2o.keys()]
     conn.close()
-    prs = [fuzz.partial_ratio(query, p.title) for p in ps]
-    final_orders = [os[idx].to_public_dict() for idx, x in enumerate(prs) if x > 70]
+    prs = {p.id: fuzz.partial_ratio(query, p.title) for p in ps}
+
+    final_orders = [pid2o[p].to_public_dict() for p in prs.keys() if prs[p] > 70]
     return {"ok": True, "orders": final_orders[:5]}
+    """
+
+    query = query.strip().casefold()
+    if not query:
+        return {"ok": True, "orders": []}
+
+    with db.connect() as conn:
+        match ctx.role:
+            case "shopper":
+                orders = db.list_orders_for_user(conn, ctx.user_id)
+
+            case "merchant":
+                orders = db.list_orders_for_store(conn, ctx.store_id)
+
+            case "support":
+                # Use your all-orders helper for support.
+                orders = list_all_orders(conn)
+
+        products_by_id = {
+            product.id: product
+            for product in db.list_products(conn)
+        }
+
+        scored_orders = []
+
+        for order in orders:
+            product = products_by_id.get(order.product_id)
+
+            if product is None:
+                continue
+
+            score = fuzz.partial_ratio(
+                query,
+                product.title.casefold(),
+            )
+
+            if score >= 70:
+                scored_orders.append((score, order.id, order))
+
+    # Highest fuzzy score first; order ID breaks ties.
+    scored_orders.sort(key=lambda item: (-item[0], item[1]))
+
+    return {
+        "ok": True,
+        "orders": [
+            order.to_public_dict()
+            for _, _, order in scored_orders[:5]
+        ],
+    }
