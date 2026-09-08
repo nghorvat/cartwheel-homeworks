@@ -24,7 +24,9 @@ from agent import db
 from agent.auth import AuthContext, can_cancel_order, permission_denied
 from agent.helpcenter import load_policy_docs
 from agent.killswitch import kill_switch
-from agent.db import get_store_by_name, list_products, list_orders_for_user, list_orders_for_store, get_order, set_order_status
+from agent.db import get_store_by_name, list_products, list_orders_for_user, list_orders_for_store, get_order, set_order_status, list_all_orders
+
+from thefuzz import fuzz
 
 MAX_SEARCH_LIMIT = 25
 DEFAULT_ORDER_LIMIT = 20
@@ -250,5 +252,18 @@ def find_order(ctx: AuthContext, query: str) -> dict[str, Any]:
         (at most 5), each as the dict returned by agent.db. If no orders
         match, return {"ok": True, "orders": []}.
     """
-    ### YOUR CODE HERE (HW1)
-    raise NotImplementedError("HW1: implement find_order")
+    os = []
+    conn = db.connect()
+    match ctx.role:
+        case "shopper":
+            os = list_orders_for_user(conn, ctx.user_id)
+        case "merchant":
+            os = list_orders_for_store(conn, ctx.store_id)
+        case "support":
+            os = list_all_orders(conn)
+    p_ids = [o.product_id for o in os]
+    ps = [p for p in list_products(conn) if p.id in p_ids]
+    conn.close()
+    prs = [fuzz.partial_ratio(query, p.title) for p in ps]
+    final_orders = [os[idx].to_public_dict() for idx, x in enumerate(prs) if x > 70]
+    return {"ok": True, "orders": final_orders[:5]}
