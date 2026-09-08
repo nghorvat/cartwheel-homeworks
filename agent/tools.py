@@ -24,6 +24,7 @@ from agent import db
 from agent.auth import AuthContext, can_cancel_order, permission_denied
 from agent.helpcenter import load_policy_docs
 from agent.killswitch import kill_switch
+from agent.db import get_store_by_name, list_products
 
 MAX_SEARCH_LIMIT = 25
 DEFAULT_ORDER_LIMIT = 20
@@ -99,8 +100,31 @@ def search_products(
         agent.db.list_products(conn, store_id) gives the candidate set.
         Open the database with agent.db.connect() and close it when done.
     """
-    ### YOUR CODE HERE (HW1)
-    raise NotImplementedError("HW1: implement search_products")
+    if not query.strip():
+        return {"ok": False, "error": "invalid_argument", 
+                "reason": f"query must be non-empty after stripping whitespace, got '{query.strip()}'."}
+    if max_price_usd is not None and max_price_usd <= 0:
+        return {"ok": False, "error": "invalid_argument", "reason": f"max_price_usd value of {max_price_usd} <= 0"}
+    
+    conn = db.connect()
+    store_match = get_store_by_name(conn, store) if store is not None else None
+    if store and not store_match:
+        conn.close()
+        return {"ok": False, "error": "not_found", "reason": f"invalid store string {store}"}
+    store_id = store_match.id if store_match is not None else None
+    products = list_products(conn, store_id=store_id)
+    query_tokens = query.casefold().split()
+    all_product_matches = []
+    for p in products:
+        if max_price_usd is None or (max_price_usd is not None and p.price_cents < max_price_usd * 100):
+            p_searchable = f"{p.title} {p.description}".casefold()
+            if all(token in p_searchable for token in query_tokens):
+                all_product_matches.append({"product_id": p.id, "store_id": p.store_id,
+                                            "title": p.title, "price_usd": p.price_usd})
+    conn.close()
+    new_limit = max(1, min(limit, MAX_SEARCH_LIMIT))
+    limited_products = sorted(all_product_matches, key=lambda p: (p["price_usd"], p["product_id"]))[:new_limit]
+    return {"ok": True, "products": limited_products, "count": len(limited_products)}
 
 
 def list_my_orders(ctx: AuthContext) -> dict[str, Any]:
